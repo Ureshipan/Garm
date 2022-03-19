@@ -31,13 +31,13 @@ MAX_TAP_BLOCKS = 0.15/INPUT_BLOCK_TIME
 fft_size = 2048  # window size for the FFT
 step_size = fft_size // 32  # distance to slide along the window (in time)
 spec_thresh = 3  # threshold for spectrograms (lower filters out more noise)
-lowcut = 10  # Hz # Low cut for our butter bandpass filter
-highcut = 100  # Hz # High cut for our butter bandpass filter
+lowcut = 40  # Hz # Low cut for our butter bandpass filter
+highcut = 120  # Hz # High cut for our butter bandpass filter
 # For mels
 n_mel_freq_components = 32  # number of mel frequency channels
 shorten_factor = 10  # how much should we compress the x-axis (time)
-start_freq = 10  # Hz # What frequency to start sampling our melS from
-end_freq = 100  # Hz # What frequency to stop sampling our melS from
+start_freq = 40  # Hz # What frequency to start sampling our melS from
+end_freq = 120  # Hz # What frequency to stop sampling our melS from
 
 
 def get_rms( block ):
@@ -221,7 +221,7 @@ class TapTester(object):
         except IOError as e:
             # dammit.
             self.errorcount += 1
-            print( "(%d) Error recording: %s"%(self.errorcount,e) )
+            print( "(%d) Error recording: %s"%(self.errorcount, e))
             self.noisycount = 1
             return
 
@@ -262,7 +262,7 @@ class TapTester(object):
             #ax.spines['right'].set_visible(False)
             #ax.spines['bottom'].set_visible(False)
             #ax.spines['left'].set_visible(False)
-            plt.draw()
+            plt.ylim([40, 120])
             plt.show()
             #plt.show(block=False)
 
