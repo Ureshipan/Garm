@@ -224,10 +224,10 @@ def av(spis):
     chisl = znam = 0
     piks = pick_peaks(spis)
     for i in range(len(piks['pos'])):
-       if piks['peaks'][i] > 200000:
+        if piks['peaks'][i] > 100000:
             chisl += piks['pos'][i] * piks['peaks'][i]
             znam += piks['peaks'][i]
-            #print(piks['pos'][i], piks['peaks'][i])
+            print(piks['pos'][i], piks['peaks'][i])
     if znam != 0:
         return chisl / znam
     else:
@@ -235,7 +235,6 @@ def av(spis):
 
 
 def pick_peaks(arr):
-    print(arr)
     posPeaks = {
         "pos": [],
         "peaks": [],
@@ -363,10 +362,10 @@ class TapTester(object):
             plt.xlabel('Time')
             plt.ylabel('Amplitude')
             plt.subplot(312)
-            p3 = plt.plot(abs(FFT_side[50:500]), "b")  # plotting the positive fft spectrum
+            p3 = plt.plot(abs(FFT_side[50:1000]), "b")  # plotting the positive fft spectrum
             plt.xlabel('Frequency (Hz)')
             plt.ylabel('Count single-sided')
-            print(av(abs(FFT_side[50:500])))
+            print(av(abs(FFT_side[50:1000])))
             #plt.xlim([50, 1000])
             plt.show()
 
