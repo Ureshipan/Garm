@@ -13,13 +13,16 @@ import copy
 from scipy.io import wavfile
 from scipy.signal import butter, lfilter
 import scipy.ndimage
+from scipy.fft import *
+import librosa.display
+from scipy.fftpack import fft
 
 INITIAL_TAP_THRESHOLD = 0.001
 FORMAT = pyaudio.paInt32
 SHORT_NORMALIZE = (1.0/32768.0)
 CHANNELS = 1
 RATE = 44100
-INPUT_BLOCK_TIME = 0.1
+INPUT_BLOCK_TIME = 0.25
 INPUT_FRAMES_PER_BLOCK = int(RATE*INPUT_BLOCK_TIME)
 # if we get this many noisy blocks in a row, increase the threshold
 OVERSENSITIVE = 10.0/INPUT_BLOCK_TIME
@@ -31,13 +34,62 @@ MAX_TAP_BLOCKS = 0.15/INPUT_BLOCK_TIME
 fft_size = 2048  # window size for the FFT
 step_size = fft_size // 32  # distance to slide along the window (in time)
 spec_thresh = 3  # threshold for spectrograms (lower filters out more noise)
-lowcut = 40  # Hz # Low cut for our butter bandpass filter
-highcut = 120  # Hz # High cut for our butter bandpass filter
+lowcut = 200  # Hz # Low cut for our butter bandpass filter
+highcut = 12000  # Hz # High cut for our butter bandpass filter
 # For mels
 n_mel_freq_components = 32  # number of mel frequency channels
 shorten_factor = 10  # how much should we compress the x-axis (time)
 start_freq = 40  # Hz # What frequency to start sampling our melS from
-end_freq = 120  # Hz # What frequency to stop sampling our melS from
+end_freq = 12000  # Hz # What frequency to stop sampling our melS from
+
+win_s = 4096
+hop_s = 512
+
+
+def freq(data):
+
+    # Open the file and convert to mono
+    # Fourier Transform
+    sample_rate = RATE
+    length = len(data)
+    counter = 0
+    for i in range(length - 1):
+        if data[i] < 0 and data[i + 1] > 0:
+            counter += 1
+    return counter / length
+
+
+def spectral_properties(y: np.ndarray, fs: int) -> dict:
+    spec = np.abs(np.fft.rfft(y))
+    freq = np.fft.rfftfreq(len(y), d=1 / fs)
+    spec = np.abs(spec)
+    amp = spec / spec.sum()
+    mean = (freq * amp).sum()
+    sd = np.sqrt(np.sum(amp * ((freq - mean) ** 2)))
+    amp_cumsum = np.cumsum(amp)
+    median = freq[len(amp_cumsum[amp_cumsum <= 0.5]) + 1]
+    mode = freq[amp.argmax()]
+    Q25 = freq[len(amp_cumsum[amp_cumsum <= 0.25]) + 1]
+    Q75 = freq[len(amp_cumsum[amp_cumsum <= 0.75]) + 1]
+    IQR = Q75 - Q25
+    z = amp - amp.mean()
+    w = amp.std()
+    skew = ((z ** 3).sum() / (len(spec) - 1)) / w ** 3
+    kurt = ((z ** 4).sum() / (len(spec) - 1)) / w ** 4
+
+    result_d = {
+        'mean': mean,
+        'sd': sd,
+        'median': median,
+        'mode': mode,
+        'Q25': Q25,
+        'Q75': Q75,
+        'IQR': IQR,
+        'skew': skew,
+        'kurt': kurt
+    }
+
+    return result_d
 
 
 def get_rms( block ):
@@ -168,6 +220,52 @@ def pretty_spectrogram(d, log=True, thresh=5, fft_size=512, step_size=64):
     return specgram
 
 
+def av(spis):
+    chisl = znam = 0
+    piks = pick_peaks(spis)
+    for i in range(len(piks['pos'])):
+       if piks['peaks'][i] > 200000:
+            chisl += piks['pos'][i] * piks['peaks'][i]
+            znam += piks['peaks'][i]
+            #print(piks['pos'][i], piks['peaks'][i])
+    if znam != 0:
+        return chisl / znam
+    else:
+        return 0
+
+
+def pick_peaks(arr):
+    print(arr)
+    posPeaks = {
+        "pos": [],
+        "peaks": [],
+    }
+    startFound = False
+    n = 0
+    while startFound == False:
+        if arr[n] == arr[n+1]:
+            n += 1
+        else:
+            startFound = True
+
+    endFound = False
+    m = len(arr) - 1
+    while endFound == False:
+        if arr[m] == arr[m-1]:
+            m -= 1
+        else:
+            endFound = True
+
+    for i in range(n+1, m):
+        if arr[i] == arr[i-1]:
+            None
+        elif arr[i] >= arr[i-1] and arr[i] >= arr[i+1]:
+            posPeaks["pos"].append(i)
+            posPeaks["peaks"].append(arr[i])
+
+    return posPeaks
+
+
 class TapTester(object):
     def __init__(self):
         self.pa = pyaudio.PyAudio()
@@ -231,7 +329,46 @@ class TapTester(object):
 
             data = np.frombuffer(self.stream.read(INPUT_FRAMES_PER_BLOCK), dtype=np.int16) #butter_bandpass_filter(block, lowcut, highcut, RATE, order=1)
             #print(data.decode())
-            data = butter_bandpass_filter(data, lowcut, highcut, RATE, order=1)
+            data = butter_bandpass_filter(data, lowcut, highcut, RATE, order=1)[100:]
+
+            # b = [(ele / 2 ** 32.) * 2 - 1 for ele in data]  # this is 8-bit track, b is now normalized on [-1,1)
+            # c = fft(b)  # calculate fourier transform (complex numbers list)
+            # d = int(len(c) / 2) # you only need half of the fft list (real signal symmetry)
+            # plt.plot(fft(data), 'r')
+            # #plt.plot(data)
+            # plt.xlim([0, 1000])
+            # plt.show()
+
+            fs_rate, signal = RATE, data
+           # print("Frequency sampling", fs_rate)
+            l_audio = len(signal.shape)
+            #print("Channels", l_audio)
+            if l_audio == 2:
+                signal = signal.sum(axis=1) / 2
+            N = signal.shape[0]
+            #print("Complete Samplings N", N)
+            secs = N / float(fs_rate)
+            #print("secs", secs)
+            Ts = 1.0 / fs_rate  # sampling interval in time
+            #print("Timestep between samples Ts", Ts)
+            t = scipy.arange(0, secs, Ts)  # time vector as scipy arange field / numpy.ndarray
+            FFT = abs(fft(signal))
+            FFT_side = FFT[range(N // 2)]  # one side FFT range
+            freqs = scipy.fftpack.fftfreq(signal.size, t[1] - t[0])
+            fft_freqs = np.array(freqs)
+            freqs_side = freqs[range(N // 2)]  # one side frequency range
+            fft_freqs_side = np.array(freqs_side)
+            plt.subplot(311)
+            p1 = plt.plot(t, signal, "g")  # plotting the signal
+            plt.xlabel('Time')
+            plt.ylabel('Amplitude')
+            plt.subplot(312)
+            p3 = plt.plot(abs(FFT_side[50:500]), "b")  # plotting the positive fft spectrum
+            plt.xlabel('Frequency (Hz)')
+            plt.ylabel('Count single-sided')
+            print(av(abs(FFT_side[50:500])))
+            #plt.xlim([50, 1000])
+            plt.show()
 
             #fig, ax = plt.subplots()
             #img = librosa.display.specshow(librosa.amplitude_to_db(data**2, ref=np.max),
@@ -239,22 +376,22 @@ class TapTester(object):
             #ax.set_title('Power spectrogram')
             #fig.colorbar(img, ax=ax, format="%+2.0f dB")
 
-            wav_spectrogram = pretty_spectrogram(
-                data,#.astype("float64"),
-                fft_size=fft_size,
-                step_size=step_size,
-                log=True,
-                thresh=spec_thresh,
-            )
-
-            fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(1, 10))#(round(np.shape(data)[0] / float(RATE), 0), 1))
-            ax = ax.matshow(
-                np.transpose(wav_spectrogram),
-                interpolation="nearest",
-                aspect="auto",
-                cmap=plt.cm.gray,
-                origin="lower",
-            )
+            # wav_spectrogram = pretty_spectrogram(
+            #     data,#.astype("float64"),
+            #     fft_size=fft_size,
+            #     step_size=step_size,
+            #     log=True,
+            #     thresh=spec_thresh,
+            # )
+            #
+            # fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(1, 10))#(round(np.shape(data)[0] / float(RATE), 0), 1))
+            # ax = ax.matshow(
+            #     np.transpose(wav_spectrogram),
+            #     interpolation="nearest",
+            #     aspect="auto",
+            #     cmap=plt.cm.gray,
+            #     origin="lower",
+            # )
             #print(fig)
             #fig.patch.set_visible(False)
             #plt.axis('off')
@@ -262,8 +399,8 @@ class TapTester(object):
             #ax.spines['right'].set_visible(False)
             #ax.spines['bottom'].set_visible(False)
             #ax.spines['left'].set_visible(False)
-            plt.ylim([40, 120])
-            plt.show()
+            #plt.ylim([40, 120])
+            #plt.show()
             #plt.show(block=False)
 
             #print('saving')
