@@ -19,17 +19,17 @@ from scipy.fftpack import fft
 
 INITIAL_TAP_THRESHOLD = 0.001
 FORMAT = pyaudio.paInt32
-SHORT_NORMALIZE = (1.0/32768.0)
+SHORT_NORMALIZE = (1.0 / 32768.0)
 CHANNELS = 1
 RATE = 44100
 INPUT_BLOCK_TIME = 0.25
-INPUT_FRAMES_PER_BLOCK = int(RATE*INPUT_BLOCK_TIME)
+INPUT_FRAMES_PER_BLOCK = int(RATE * INPUT_BLOCK_TIME)
 # if we get this many noisy blocks in a row, increase the threshold
-OVERSENSITIVE = 10.0/INPUT_BLOCK_TIME
+OVERSENSITIVE = 10.0 / INPUT_BLOCK_TIME
 # if we get this many quiet blocks in a row, decrease the threshold
-UNDERSENSITIVE = 100.0/INPUT_BLOCK_TIME
+UNDERSENSITIVE = 100.0 / INPUT_BLOCK_TIME
 # if the noise was longer than this many blocks, it's not a 'tap'
-MAX_TAP_BLOCKS = 0.15/INPUT_BLOCK_TIME
+MAX_TAP_BLOCKS = 0.15 / INPUT_BLOCK_TIME
 ### Parameters ###
 fft_size = 2048  # window size for the FFT
 step_size = fft_size // 32  # distance to slide along the window (in time)
@@ -47,7 +47,6 @@ hop_s = 512
 
 
 def freq(data):
-
     # Open the file and convert to mono
     # Fourier Transform
     sample_rate = RATE
@@ -92,7 +91,7 @@ def spectral_properties(y: np.ndarray, fs: int) -> dict:
     return result_d
 
 
-def get_rms( block ):
+def get_rms(block):
     # RMS amplitude is defined as the square root of the
     # mean over time of the square of the amplitude.
     # so we need to convert this string of bytes into
@@ -100,9 +99,9 @@ def get_rms( block ):
 
     # we will get one short out for each
     # two chars in the string.
-    count = len(block)/2
-    format = "%dh"%(count)
-    shorts = struct.unpack( format, block )
+    count = len(block) / 2
+    format = "%dh" % (count)
+    shorts = struct.unpack(format, block)
 
     # iterate over the block.
     sum_squares = 0.0
@@ -110,9 +109,9 @@ def get_rms( block ):
         # sample is a signed short in +/- 32768.
         # normalize it to 1.0
         n = sample * SHORT_NORMALIZE
-        sum_squares += n*n
+        sum_squares += n * n
 
-    return math.sqrt( sum_squares / count )
+    return math.sqrt(sum_squares / count)
 
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
@@ -211,11 +210,11 @@ def pretty_spectrogram(d, log=True, thresh=5, fft_size=512, step_size=64):
         specgram = np.log10(specgram)  # take log
         specgram[
             specgram < -thresh
-        ] = -thresh  # set anything less than the threshold as the threshold
+            ] = -thresh  # set anything less than the threshold as the threshold
     else:
         specgram[
             specgram < thresh
-        ] = thresh  # set anything less than the threshold as the threshold
+            ] = thresh  # set anything less than the threshold as the threshold
 
     return specgram
 
@@ -242,7 +241,7 @@ def pick_peaks(arr):
     startFound = False
     n = 0
     while startFound == False:
-        if arr[n] == arr[n+1]:
+        if arr[n] == arr[n + 1]:
             n += 1
         else:
             startFound = True
@@ -250,15 +249,15 @@ def pick_peaks(arr):
     endFound = False
     m = len(arr) - 1
     while endFound == False:
-        if arr[m] == arr[m-1]:
+        if arr[m] == arr[m - 1]:
             m -= 1
         else:
             endFound = True
 
-    for i in range(n+1, m):
-        if arr[i] == arr[i-1]:
+    for i in range(n + 1, m):
+        if arr[i] == arr[i - 1]:
             None
-        elif arr[i] >= arr[i-1] and arr[i] >= arr[i+1]:
+        elif arr[i] >= arr[i - 1] and arr[i] >= arr[i + 1]:
             posPeaks["pos"].append(i)
             posPeaks["peaks"].append(arr[i])
 
@@ -270,42 +269,42 @@ class TapTester(object):
         self.pa = pyaudio.PyAudio()
         self.stream = self.open_mic_stream()
         self.tap_threshold = INITIAL_TAP_THRESHOLD
-        self.noisycount = MAX_TAP_BLOCKS+1
+        self.noisycount = MAX_TAP_BLOCKS + 1
         self.quietcount = 0
         self.errorcount = 0
-        for i in range( self.pa.get_device_count() ):
+        for i in range(self.pa.get_device_count()):
             devinfo = self.pa.get_device_info_by_index(i)
-            print( "Device %d: %s"%(i,devinfo["name"]) )
+            print("Device %d: %s" % (i, devinfo["name"]))
 
     def stop(self):
         self.stream.close()
 
     def find_input_device(self):
         device_index = None
-        for i in range( self.pa.get_device_count() ):
+        for i in range(self.pa.get_device_count()):
             devinfo = self.pa.get_device_info_by_index(i)
-            print( "Device %d: %s"%(i,devinfo["name"]) )
+            print("Device %d: %s" % (i, devinfo["name"]))
 
-            for keyword in ["mic","input"]:
+            for keyword in ["mic", "input"]:
                 if keyword in devinfo["name"].lower():
-                    print( "Found an input: device %d - %s"%(i,devinfo["name"]) )
+                    print("Found an input: device %d - %s" % (i, devinfo["name"]))
                     device_index = i
                     return device_index
 
         if device_index == None:
-            print( "No preferred input found; using default input device." )
+            print("No preferred input found; using default input device.")
 
         return device_index
 
-    def open_mic_stream( self ):
-        device_index = 1#self.find_input_device()
+    def open_mic_stream(self):
+        device_index = 1  # self.find_input_device()
 
-        stream = self.pa.open(   format = FORMAT,
-                                 channels = CHANNELS,
-                                 rate = RATE,
-                                 input = True,
-                                 input_device_index = device_index,
-                                 frames_per_buffer = INPUT_FRAMES_PER_BLOCK)
+        stream = self.pa.open(format=FORMAT,
+                              channels=CHANNELS,
+                              rate=RATE,
+                              input=True,
+                              input_device_index=device_index,
+                              frames_per_buffer=INPUT_FRAMES_PER_BLOCK)
 
         return stream
 
@@ -318,16 +317,17 @@ class TapTester(object):
         except IOError as e:
             # dammit.
             self.errorcount += 1
-            print( "(%d) Error recording: %s"%(self.errorcount, e))
+            print("(%d) Error recording: %s" % (self.errorcount, e))
             self.noisycount = 1
             return
 
-        amplitude = get_rms( block )
+        amplitude = get_rms(block)
         if amplitude > self.tap_threshold:
             # noisy block
 
-            data = np.frombuffer(self.stream.read(INPUT_FRAMES_PER_BLOCK), dtype=np.int16) #butter_bandpass_filter(block, lowcut, highcut, RATE, order=1)
-            #print(data.decode())
+            data = np.frombuffer(self.stream.read(INPUT_FRAMES_PER_BLOCK),
+                                 dtype=np.int16)  # butter_bandpass_filter(block, lowcut, highcut, RATE, order=1)
+            # print(data.decode())
             data = butter_bandpass_filter(data, lowcut, highcut, RATE, order=1)[100:]
 
             # b = [(ele / 2 ** 32.) * 2 - 1 for ele in data]  # this is 8-bit track, b is now normalized on [-1,1)
@@ -339,17 +339,17 @@ class TapTester(object):
             # plt.show()
 
             fs_rate, signal = RATE, data
-           # print("Frequency sampling", fs_rate)
+            # print("Frequency sampling", fs_rate)
             l_audio = len(signal.shape)
-            #print("Channels", l_audio)
+            # print("Channels", l_audio)
             if l_audio == 2:
                 signal = signal.sum(axis=1) / 2
             N = signal.shape[0]
-            #print("Complete Samplings N", N)
+            # print("Complete Samplings N", N)
             secs = N / float(fs_rate)
-            #print("secs", secs)
+            # print("secs", secs)
             Ts = 1.0 / fs_rate  # sampling interval in time
-            #print("Timestep between samples Ts", Ts)
+            # print("Timestep between samples Ts", Ts)
             t = scipy.arange(0, secs, Ts)  # time vector as scipy arange field / numpy.ndarray
             FFT = abs(fft(signal))
             FFT_side = FFT[range(N // 2)]  # one side FFT range
@@ -362,18 +362,23 @@ class TapTester(object):
             plt.xlabel('Time')
             plt.ylabel('Amplitude')
             plt.subplot(312)
-            p3 = plt.plot(abs(FFT_side[50:1000]), "b")  # plotting the positive fft spectrum
+            print(fft_freqs[:10])
+            print(FFT_side[:10])
+            fftsi = FFT_side#np.hstack([FFT_side, FFT_side[::]])
+            print(len(fftsi), len(fft_freqs))
+            p3 = plt.plot(fft_freqs[:len(fft_freqs) // 2] - 11025, fftsi, "b")  # plotting the positive fft spectrum
             plt.xlabel('Frequency (Hz)')
+
             plt.ylabel('Count single-sided')
-            print(av(abs(FFT_side[50:1000])))
-            #plt.xlim([50, 1000])
+            #print(av(fft_freqs, abs(FFT_side[50:1000])))
+            # plt.xlim([50, 1000])
             plt.show()
 
-            #fig, ax = plt.subplots()
-            #img = librosa.display.specshow(librosa.amplitude_to_db(data**2, ref=np.max),
+            # fig, ax = plt.subplots()
+            # img = librosa.display.specshow(librosa.amplitude_to_db(data**2, ref=np.max),
             #                               y_axis='log', x_axis='time', ax=ax)
-            #ax.set_title('Power spectrogram')
-            #fig.colorbar(img, ax=ax, format="%+2.0f dB")
+            # ax.set_title('Power spectrogram')
+            # fig.colorbar(img, ax=ax, format="%+2.0f dB")
 
             # wav_spectrogram = pretty_spectrogram(
             #     data,#.astype("float64"),
@@ -391,22 +396,21 @@ class TapTester(object):
             #     cmap=plt.cm.gray,
             #     origin="lower",
             # )
-            #print(fig)
-            #fig.patch.set_visible(False)
-            #plt.axis('off')
-            #ax.spines['top'].set_visible(False)
-            #ax.spines['right'].set_visible(False)
-            #ax.spines['bottom'].set_visible(False)
-            #ax.spines['left'].set_visible(False)
-            #plt.ylim([40, 120])
-            #plt.show()
-            #plt.show(block=False)
+            # print(fig)
+            # fig.patch.set_visible(False)
+            # plt.axis('off')
+            # ax.spines['top'].set_visible(False)
+            # ax.spines['right'].set_visible(False)
+            # ax.spines['bottom'].set_visible(False)
+            # ax.spines['left'].set_visible(False)
+            # plt.ylim([40, 120])
+            # plt.show()
+            # plt.show(block=False)
 
-            #print('saving')
-            #plt.savefig('temp.png')
-            #plt.clf()
-            #plt.close(fig)
-
+            # print('saving')
+            # plt.savefig('temp.png')
+            # plt.clf()
+            # plt.close(fig)
 
             self.quietcount = 0
             self.noisycount += 1
