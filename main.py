@@ -222,10 +222,11 @@ def pretty_spectrogram(d, log=True, thresh=5, fft_size=512, step_size=64):
 def av(ind, spis):
     chisl = znam = 0
     for i in ind:
-        if spis[int(i)] > 100000:
-            chisl += i * spis[int(i)]
-            znam += spis[int(i)]
-            print(i, spis[int(i)])
+        if int(i) < 10975:
+            if spis[int(i)] > 100000:
+                chisl += i * spis[int(i)]
+                znam += spis[int(i)]
+                print(i, spis[int(i)])
     if znam != 0:
         return chisl / znam
     else:
@@ -349,7 +350,7 @@ class TapTester(object):
             # print("secs", secs)
             Ts = 1.0 / fs_rate  # sampling interval in time
             # print("Timestep between samples Ts", Ts)
-            t = scipy.arange(0, secs, Ts)  # time vector as scipy arange field / numpy.ndarray
+            t = np.arange(0, secs, Ts)  # time vector as scipy arange field / numpy.ndarray
             FFT = abs(fft(signal))
             FFT_side = FFT[range(N // 2)]  # one side FFT range
             freqs = scipy.fftpack.fftfreq(signal.size, t[1] - t[0])
@@ -361,15 +362,16 @@ class TapTester(object):
             plt.xlabel('Time')
             plt.ylabel('Amplitude')
             plt.subplot(312)
-            print(fft_freqs[:10])
-            print(FFT_side[:10])
+           # print(fft_freqs[:10])
+            #print(FFT_side[:10])
             fftsi = FFT_side#np.hstack([FFT_side, FFT_side[::]])
-            print(len(fftsi), len(fft_freqs))
-            p3 = plt.plot(fft_freqs[:len(fft_freqs) // 2] - 11025, abs(fftsi), "b")  # plotting the positive fft spectrum
+            #print(len(fftsi), len(fft_freqs))
+            p3 = plt.plot(abs(fft_freqs[:len(fft_freqs) // 2] - 11025), abs(fftsi), "b")  # plotting the positive fft spectrum
             plt.xlabel('Frequency (Hz)')
 
             plt.ylabel('Count single-sided')
-            print(av(fft_freqs[:len(fft_freqs) // 2] - 11025, abs(FFT_side)))
+            print(abs(fft_freqs[:len(fft_freqs) // 2] - 10974))
+            print(av(abs(fft_freqs[:len(fft_freqs) // 2] - 10974), abs(fftsi)))
             # plt.xlim([50, 1000])
             plt.show()
 
