@@ -226,7 +226,7 @@ def av(ind, spis):
             if spis[int(i)] > 100000:
                 chisl += i * spis[int(i)]
                 znam += spis[int(i)]
-                print(i, spis[int(i)])
+                #print(i, spis[int(i)])
     if znam != 0:
         return chisl / znam
     else:
@@ -366,14 +366,15 @@ class TapTester(object):
             #print(FFT_side[:10])
             fftsi = FFT_side#np.hstack([FFT_side, FFT_side[::]])
             #print(len(fftsi), len(fft_freqs))
-            p3 = plt.plot(abs(fft_freqs[:len(fft_freqs) // 2] - 11025), abs(fftsi), "b")  # plotting the positive fft spectrum
+            p3 = plt.plot(abs(fft_freqs[:len(fft_freqs) // 2] - 10974), abs(fftsi), "b")  # plotting the positive fft spectrum
             plt.xlabel('Frequency (Hz)')
 
             plt.ylabel('Count single-sided')
-            print(abs(fft_freqs[:len(fft_freqs) // 2] - 10974))
+            #print(abs(fft_freqs[:len(fft_freqs) // 2] - 10974))
             print(av(abs(fft_freqs[:len(fft_freqs) // 2] - 10974), abs(fftsi)))
             # plt.xlim([50, 1000])
             plt.show()
+            wait = input()
 
             # fig, ax = plt.subplots()
             # img = librosa.display.specshow(librosa.amplitude_to_db(data**2, ref=np.max),
