@@ -219,14 +219,13 @@ def pretty_spectrogram(d, log=True, thresh=5, fft_size=512, step_size=64):
     return specgram
 
 
-def av(spis):
+def av(ind, spis):
     chisl = znam = 0
-    piks = pick_peaks(spis)
-    for i in range(len(piks['pos'])):
-        if piks['peaks'][i] > 100000:
-            chisl += piks['pos'][i] * piks['peaks'][i]
-            znam += piks['peaks'][i]
-            print(piks['pos'][i], piks['peaks'][i])
+    for i in ind:
+        if spis[int(i)] > 100000:
+            chisl += i * spis[int(i)]
+            znam += spis[int(i)]
+            print(i, spis[int(i)])
     if znam != 0:
         return chisl / znam
     else:
@@ -366,11 +365,11 @@ class TapTester(object):
             print(FFT_side[:10])
             fftsi = FFT_side#np.hstack([FFT_side, FFT_side[::]])
             print(len(fftsi), len(fft_freqs))
-            p3 = plt.plot(fft_freqs[:len(fft_freqs) // 2] - 11025, fftsi, "b")  # plotting the positive fft spectrum
+            p3 = plt.plot(fft_freqs[:len(fft_freqs) // 2] - 11025, abs(fftsi), "b")  # plotting the positive fft spectrum
             plt.xlabel('Frequency (Hz)')
 
             plt.ylabel('Count single-sided')
-            #print(av(fft_freqs, abs(FFT_side[50:1000])))
+            print(av(fft_freqs[:len(fft_freqs) // 2] - 11025, abs(FFT_side)))
             # plt.xlim([50, 1000])
             plt.show()
 
